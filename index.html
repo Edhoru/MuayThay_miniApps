@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Daoko – Where (Test)</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0; padding: 24px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--tg-theme-bg-color, #fff);
+      color: var(--tg-theme-text-color, #111);
+      display: grid; place-items: center; min-height: 100dvh;
+    }
+    .card {
+      width: 100%; max-width: 420px;
+      padding: 20px; border-radius: 16px;
+      background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+      box-shadow: 0 2px 10px rgba(0,0,0,.06);
+      text-align: center;
+    }
+    button {
+      display: inline-block;
+      padding: 12px 16px;
+      border: 0; border-radius: 12px;
+      font-size: 16px; font-weight: 600;
+      background: var(--tg-theme-button-color, #2ea6ff);
+      color: var(--tg-theme-button-text-color, #fff);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 style="margin:0 0 12px">Set Where (Test)</h1>
+    <p style="opacity:.8; margin:0 0 20px">Tap to send a test payload to the bot.</p>
+    <button id="send">Send “hello location”</button>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();      // apply theme
+    tg.expand?.();   // optional: use more vertical space
+
+    document.getElementById('send').addEventListener('click', () => {
+      const payload = {
+        type: 'where_test',
+        message: 'hello location'
+      };
+      tg.sendData(JSON.stringify(payload));
+      tg.close(); // close the Mini App after sending
+    });
+  </script>
+</body>
+</html>
