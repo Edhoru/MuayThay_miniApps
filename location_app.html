@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Daoko – Where</title>
 
-  <!-- Telegram bridge -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
   <!-- Leaflet (no key needed) -->
@@ -81,28 +80,44 @@
     tg.ready();
     tg.expand?.();
 
-    // Nice UX: also wire Telegram's MainButton
     tg.MainButton.setText('Send location');
     tg.MainButton.hide();
     tg.MainButton.onClick(sendLocation);
 
-    let map, marker, selected = null;
+    let map, marker, selected = null, layer, fallbackUsed = false;
 
-    // Init Leaflet
-    map = L.map('map', {
-      zoomControl: true,
-      attributionControl: true,
-    }).setView([19.4326, -99.1332], 13); // CDMX default
+    // 1) Init map
+    map = L.map('map', { zoomControl: true, attributionControl: true })
+            .setView([19.4326, -99.1332], 13); // CDMX default
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // 2) Add primary tiles (single host; fewer chances of being blocked)
+    addTiles('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors'
-    }).addTo(map);
+    });
+
+    // 3) If the first tile fails, swap to a fallback provider automatically
+    function addTiles(url, opts) {
+      if (layer) map.removeLayer(layer);
+      layer = L.tileLayer(url, opts).addTo(map);
+      layer.once('tileerror', onTileError);
+      // Helps after Telegram resizes/expands:
+      setTimeout(() => map.invalidateSize(), 0);
+    }
+
+    function onTileError() {
+      if (fallbackUsed) return;
+      fallbackUsed = true;
+      addTiles('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        subdomains: ['a','b','c','d'],
+        maxZoom: 20,
+        attribution: '&copy; OSM &copy; <a href="https://carto.com/attributions">CARTO</a>'
+      });
+    }
 
     // Click to place/move marker
     map.on('click', (e) => setMarker(e.latlng.lat, e.latlng.lng));
 
-    // Buttons
     document.getElementById('locate').addEventListener('click', () => {
       if (!navigator.geolocation) {
         alert('Geolocation not available. Tap the map to set a pin.');
@@ -138,4 +153,34 @@
     function updateSelection(lat, lng) {
       selected = { lat: round6(lat), lng: round6(lng), address: null };
       document.getElementById('coords').textContent = `Lat: ${selected.lat}, Lng: ${selected.lng}`;
-      document.getElementB
+      document.getElementById('addr').textContent = 'Address: looking up…';
+      reverseGeocode(lat, lng)
+        .then(addr => {
+          selected.address = addr || null;
+          document.getElementById('addr').textContent = 'Address: ' + (addr || 'not available');
+        })
+        .catch(() => {
+          selected.address = null;
+          document.getElementById('addr').textContent = 'Address: not available';
+        });
+    }
+
+    async function reverseGeocode(lat, lng) {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.display_name || null;
+    }
+
+    function sendLocation() {
+      if (!selected) { alert('Please place the pin first.'); return; }
+      const payload = { type: 'where', lat: selected.lat, lng: selected.lng, address: selected.address };
+      tg.sendData(JSON.stringify(payload));
+      tg.close();
+    }
+
+    function round6(n) { return Math.round(n * 1e6) / 1e6; }
+  </script>
+</body>
+</html>
