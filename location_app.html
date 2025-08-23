@@ -1,71 +1,87 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Create Event</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Create Event</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <!-- Leaflet (no key) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
 
-  <style>
-    :root { color-scheme: light dark; }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; padding: 16px;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      background: var(--tg-theme-bg-color, #fff);
-      color: var(--tg-theme-text-color, #111);
-      min-height: 100dvh; display: grid; place-items: center;
-    }
-    .card {
-      width: 100%; max-width: 560px;
-      border-radius: 16px; background: var(--tg-theme-secondary-bg-color, #f6f6f6);
-      box-shadow: 0 2px 10px rgba(0,0,0,.06); overflow: hidden;
-      border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
-    }
-    .section { padding: 16px; }
-    h2 { margin: 0 0 8px; font-size: 18px; }
-    .grid { display: grid; gap: 10px; }
-    .label { font-size: 13px; opacity: .9; }
-    input[type="text"], input[type="datetime-local"] {
-      height: 40px; border-radius: 10px; border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
-      background: var(--tg-theme-bg-color, #fff); color: inherit; padding: 0 12px; outline: none;
-    }
-    .map-wrap { position: relative; height: 360px; }
-    #map { position: absolute; inset: 0; border-radius: 12px; overflow: hidden; background: #ddd; }
-    .controls { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 10; }
-    .control-btn {
-      width: 36px; height: 36px; border-radius: 10px; border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
-      background: var(--tg-theme-bg-color, #fff); color: inherit; display: grid; place-items: center; cursor: pointer;
-    }
-    .badge { position: absolute; left: 10px; bottom: 10px; z-index: 10;
-      font-size: 12px; background: color-mix(in srgb, var(--tg-theme-bg-color, #fff) 80%, transparent);
-      padding: 4px 10px; border-radius: 999px; border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
-      backdrop-filter: blur(6px);
-    }
-    .footer { padding: 12px 16px 16px; display: grid; gap: 8px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; white-space: nowrap; overflow: auto; }
-    .row { display: flex; gap: 8px; margin-top: 4px; }
-    .btn {
-      flex: 1; height: 44px; border: 0; border-radius: 12px; font-weight: 600; cursor: pointer;
-      background: var(--tg-theme-button-color, #2ea6ff); color: var(--tg-theme-button-text-color, #fff);
-    }
-    .btn.secondary {
-      background: transparent; color: var(--tg-theme-hint-color, #555);
-      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
-    }
-    .error { color: #b00020; font-size: 12px; display: none; }
-    .leaflet-control-attribution { font-size: 11px; }
-    /* simple icon glyphs */
-    .ico { font: 16px/1 system-ui, sans-serif; }
-  </style>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: var(--tg-theme-bg-color, #fff);
+    color: var(--tg-theme-text-color, #111);
+    min-height: 100dvh; display: grid; place-items: center;
+  }
+  /* Card (your layout’s outer container) */
+  .card {
+    width: 100%; max-width: 560px;
+    border-radius: 16px;
+    background: var(--tg-theme-secondary-bg-color, #f6f6f6);
+    box-shadow: 0 2px 10px rgba(0,0,0,.06);
+    border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+    overflow: hidden;
+  }
+  .section { padding: 16px; }
+  h2 { margin: 0 0 10px; font-size: 18px; }
+  .grid { display: grid; gap: 8px; }
+  .label { font-size: 13px; opacity: .9; }
+  input[type="text"], input[type="datetime-local"] {
+    height: 40px; border-radius: 10px; padding: 0 12px;
+    border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+    background: var(--tg-theme-bg-color, #fff);
+    color: inherit; outline: none;
+  }
+
+  /* Map area with overlaid controls (your MapView layout) */
+  .map-wrap { position: relative; height: 360px; }
+  #map { position: absolute; inset: 0; border-radius: 12px; overflow: hidden; background: #ddd; }
+  .controls {
+    position: absolute; top: 10px; right: 10px; z-index: 10;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .control-btn {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: var(--tg-theme-bg-color, #fff); color: inherit;
+    border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+    display: grid; place-items: center; cursor: pointer;
+  }
+  .badge {
+    position: absolute; left: 10px; bottom: 10px; z-index: 10;
+    font-size: 12px; background: color-mix(in srgb, var(--tg-theme-bg-color, #fff) 85%, transparent);
+    padding: 4px 10px; border-radius: 999px;
+    border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+    backdrop-filter: blur(6px);
+  }
+
+  /* Footer: coords, address and actions */
+  .footer { padding: 12px 16px 16px; display: grid; gap: 8px; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; white-space: nowrap; overflow: auto; }
+  .row { display: flex; gap: 8px; }
+  .btn {
+    flex: 1; height: 44px; border-radius: 12px; font-weight: 600; cursor: pointer;
+    border: 0; background: var(--tg-theme-button-color, #2ea6ff);
+    color: var(--tg-theme-button-text-color, #fff);
+  }
+  .btn.secondary {
+    background: transparent; color: var(--tg-theme-hint-color, #555);
+    border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  }
+  .error { color: #b00020; font-size: 12px; display: none; }
+  .leaflet-control-attribution { font-size: 11px; }
+  /* minimal icons (no color libs) */
+  .ico { font: 16px/1 system-ui, sans-serif; }
+</style>
 </head>
 <body>
   <div class="card">
-    <!-- Header / fields -->
+    <!-- Fields (keeps your layout idea) -->
     <div class="section grid">
       <h2>Create Event</h2>
       <div class="grid">
@@ -75,20 +91,22 @@
       <div class="grid">
         <label class="label" for="eventDate">Date &amp; time</label>
         <input id="eventDate" type="datetime-local" />
-        <div id="dateError" class="error">Please choose a date/time.</div>
+        <div id="dateError" class="error">Please choose a date &amp; time.</div>
       </div>
     </div>
 
-    <!-- Map -->
+    <!-- Map with overlay controls (zoom/locate) -->
     <div class="section">
       <div class="label" style="margin-bottom:6px">Location</div>
       <div class="map-wrap">
         <div id="map" role="application" aria-label="Location map"></div>
+
         <div class="controls">
-          <button class="control-btn" id="zoomIn" title="Zoom in"><span class="ico">＋</span></button>
+          <button class="control-btn" id="zoomIn"  title="Zoom in"><span class="ico">＋</span></button>
           <button class="control-btn" id="zoomOut" title="Zoom out"><span class="ico">－</span></button>
-          <button class="control-btn" id="locate" title="Use my location"><span class="ico">◎</span></button>
+          <button class="control-btn" id="locate"  title="Use my location"><span class="ico">◎</span></button>
         </div>
+
         <div class="badge" id="zoomBadge">Zoom: —</div>
       </div>
       <div id="locError" class="error" style="margin-top:6px">Please place the pin.</div>
@@ -105,153 +123,154 @@
     </div>
   </div>
 
-  <script>
-    const tg = window.Telegram.WebApp;
-    tg.ready(); tg.expand?.();
+<script>
+  // Telegram
+  const tg = window.Telegram.WebApp; tg.ready(); tg.expand?.();
 
-    const nameInput = document.getElementById('eventName');
-    const dateInput = document.getElementById('eventDate');
-    const createBtn = document.getElementById('createBtn');
-    const dateError = document.getElementById('dateError');
-    const locError  = document.getElementById('locError');
+  // Form refs
+  const nameInput = document.getElementById('eventName');
+  const dateInput = document.getElementById('eventDate');
+  const createBtn = document.getElementById('createBtn');
+  const dateError = document.getElementById('dateError');
+  const locError  = document.getElementById('locError');
 
-    // Prefill date to next 15 min
-    (function prefill() {
-      const now = new Date();
-      now.setSeconds(0,0);
-      const m = now.getMinutes();
-      now.setMinutes(m + (15 - (m % 15)) % 15);
-      dateInput.value = toLocalDatetimeValue(now);
-    })();
+  // Prefill date to next 15 min
+  (function prefill() {
+    const now = new Date(); now.setSeconds(0,0);
+    const m = now.getMinutes(); now.setMinutes(m + (15 - (m % 15)) % 15);
+    dateInput.value = toLocalDatetimeValue(now);
+  })();
 
-    // Leaflet map
-    let map, marker, selected = null, tileLayer;
-    map = L.map('map', { zoomControl: false, attributionControl: true })
-            .setView([19.4326, -99.1332], 13);
-    updateZoomBadge();
-    tileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors'
+  // Leaflet map (matches your overlay-controls layout)
+  let map, marker, selected = null;
+  map = L.map('map', { zoomControl: false, attributionControl: true })
+          .setView([19.4326, -99.1332], 13); // CDMX default
+  updateZoomBadge();
+
+  const base = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors'
+  }).addTo(map);
+
+  base.once('tileerror', () => {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      subdomains: ['a','b','c','d'], maxZoom: 20,
+      attribution: '&copy; OSM &copy; <a href="https://carto.com/attributions">CARTO</a>'
     }).addTo(map);
-    tileLayer.once('tileerror', () => {
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        subdomains: ['a','b','c','d'], maxZoom: 20,
-        attribution: '&copy; OSM &copy; <a href="https://carto.com/attributions">CARTO</a>'
-      }).addTo(map);
-    });
+  });
 
-    setTimeout(() => map.invalidateSize(), 0);
+  setTimeout(() => map.invalidateSize(), 0);
+  map.on('click', (e) => setMarker(e.latlng.lat, e.latlng.lng));
+  map.on('zoomend', updateZoomBadge);
 
-    map.on('click', (e) => setMarker(e.latlng.lat, e.latlng.lng));
-    map.on('zoomend', updateZoomBadge);
+  // overlay controls
+  document.getElementById('zoomIn').onclick = () => map.zoomIn();
+  document.getElementById('zoomOut').onclick = () => map.zoomOut();
+  document.getElementById('locate').onclick = useMyLocation;
+  document.getElementById('useMyLocation').onclick = useMyLocation;
 
-    document.getElementById('zoomIn').onclick = () => map.zoomIn();
-    document.getElementById('zoomOut').onclick = () => map.zoomOut();
-    document.getElementById('locate').onclick = useMyLocation;
-    document.getElementById('useMyLocation').onclick = useMyLocation;
+  function updateZoomBadge() {
+    document.getElementById('zoomBadge').textContent = `Zoom: ${map.getZoom()}`;
+  }
 
-    function updateZoomBadge() {
-      document.getElementById('zoomBadge').textContent = `Zoom: ${map.getZoom()}`;
-    }
+  function useMyLocation() {
+    if (!navigator.geolocation) return alert('Geolocation not available.');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude, lng = pos.coords.longitude;
+        map.setView([lat, lng], 16);
+        setMarker(lat, lng);
+      },
+      () => alert('Could not get location. Tap the map to set a pin.'),
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }
 
-    function useMyLocation() {
-      if (!navigator.geolocation) return alert('Geolocation not available.');
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = pos.coords.latitude, lng = pos.coords.longitude;
-          map.setView([lat, lng], 16);
-          setMarker(lat, lng);
-        },
-        () => alert('Could not get location. Tap the map to set a pin.'),
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
-    }
-
-    function setMarker(lat, lng) {
-      if (!marker) {
-        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-        marker.on('dragend', () => {
-          const p = marker.getLatLng();
-          updateSelection(p.lat, p.lng);
-        });
-      } else {
-        marker.setLatLng([lat, lng]);
-      }
-      updateSelection(lat, lng);
-    }
-
-    function updateSelection(lat, lng) {
-      selected = { lat: round6(lat), lng: round6(lng), address: null };
-      document.getElementById('coords').textContent = `Lat: ${selected.lat}, Lng: ${selected.lng}`;
-      document.getElementById('addr').textContent = 'Address: looking up…';
-      reverseGeocode(lat, lng).then(addr => {
-        selected.address = addr || null;
-        document.getElementById('addr').textContent = 'Address: ' + (addr || 'not available');
-        updateValidity();
-      }).catch(() => {
-        selected.address = null;
-        document.getElementById('addr').textContent = 'Address: not available';
-        updateValidity();
+  function setMarker(lat, lng) {
+    if (!marker) {
+      marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+      marker.on('dragend', () => {
+        const p = marker.getLatLng();
+        updateSelection(p.lat, p.lng);
       });
+    } else {
+      marker.setLatLng([lat, lng]);
     }
+    updateSelection(lat, lng);
+  }
 
-    async function reverseGeocode(lat, lng) {
-      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
-      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data.display_name || null;
-    }
+  function updateSelection(lat, lng) {
+    selected = { lat: round6(lat), lng: round6(lng), address: null };
+    document.getElementById('coords').textContent = `Lat: ${selected.lat}, Lng: ${selected.lng}`;
+    document.getElementById('addr').textContent = 'Address: looking up…';
+    reverseGeocode(lat, lng).then(addr => {
+      selected.address = addr || null;
+      document.getElementById('addr').textContent = 'Address: ' + (addr || 'not available');
+      updateValidity();
+    }).catch(() => {
+      selected.address = null;
+      document.getElementById('addr').textContent = 'Address: not available';
+      updateValidity();
+    });
+  }
 
-    // Validation + TG MainButton
-    nameInput.addEventListener('input', updateValidity);
-    dateInput.addEventListener('input', updateValidity);
-    createBtn.addEventListener('click', send);
+  async function reverseGeocode(lat, lng) {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.display_name || null;
+  }
 
-    function updateValidity() {
-      const ok = isValid();
-      dateError.style.display = dateInput.value ? 'none' : 'block';
-      locError.style.display  = selected ? 'none' : 'block';
-      createBtn.disabled = !ok;
-      if (ok) tg.MainButton.show(); else tg.MainButton.hide();
-      tg.MainButton.setText('Create event');
-      tg.MainButton.onClick(send);
-    }
+  // validation + MainButton like your flow
+  nameInput.addEventListener('input', updateValidity);
+  dateInput.addEventListener('input', updateValidity);
+  createBtn.addEventListener('click', send);
 
-    function isValid() {
-      return nameInput.value.trim().length > 0 && !!dateInput.value && !!selected;
-    }
+  function updateValidity() {
+    const ok = isValid();
+    dateError.style.display = dateInput.value ? 'none' : 'block';
+    locError.style.display  = selected ? 'none' : 'block';
+    createBtn.disabled = !ok;
+    if (ok) tg.MainButton.show(); else tg.MainButton.hide();
+    tg.MainButton.setText('Create event');
+    tg.MainButton.onClick(send);
+  }
 
-    function send() {
-      if (!isValid()) return;
-      const whenLocal = dateInput.value;
-      const whenISO = toIsoFromLocal(whenLocal);
-      const payload = {
-        type: 'create_event',
-        data: {
-          name: nameInput.value.trim(),
-          datetime_local: whenLocal,
-          datetime_iso: whenISO,
-          tz_offset_minutes: new Date().getTimezoneOffset() * -1,
-          location: { lat: selected.lat, lng: selected.lng, address: selected.address ?? null }
-        }
-      };
-      tg.sendData(JSON.stringify(payload));
-      tg.close();
-    }
+  function isValid() {
+    return nameInput.value.trim().length > 0 && !!dateInput.value && !!selected;
+  }
 
-    // helpers
-    function round6(n){ return Math.round(n*1e6)/1e6; }
-    function toLocalDatetimeValue(d){
-      const p = n => String(n).padStart(2,'0');
-      return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-    }
-    function toIsoFromLocal(localStr){
-      if(!localStr) return null;
-      const [date,time]=localStr.split('T'); const [y,m,dd]=date.split('-').map(Number);
-      const [hh,mm]=(time||'00:00').split(':').map(Number);
-      return new Date(y,m-1,dd,hh,mm,0).toISOString();
-    }
-  </script>
+  function send() {
+    if (!isValid()) return;
+    const whenLocal = dateInput.value;
+    const whenISO = toIsoFromLocal(whenLocal);
+    const payload = {
+      type: 'create_event',
+      data: {
+        name: nameInput.value.trim(),
+        datetime_local: whenLocal,
+        datetime_iso: whenISO,
+        tz_offset_minutes: new Date().getTimezoneOffset() * -1,
+        location: { lat: selected.lat, lng: selected.lng, address: selected.address ?? null }
+      }
+    };
+    tg.sendData(JSON.stringify(payload));
+    tg.close();
+  }
+
+  // helpers
+  function round6(n){ return Math.round(n*1e6)/1e6; }
+  function toLocalDatetimeValue(d){
+    const p = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+  function toIsoFromLocal(localStr){
+    if(!localStr) return null;
+    const [date,time]=localStr.split('T'); const [y,m,dd]=date.split('-').map(Number);
+    const [hh,mm]=(time||'00:00').split(':').map(Number);
+    return new Date(y,m-1,dd,hh,mm,0).toISOString();
+  }
+</script>
 </body>
 </html>
