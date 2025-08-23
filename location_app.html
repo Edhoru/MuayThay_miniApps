@@ -1,283 +1,258 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Create Event</title>
+'use client'
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+import { useEffect, useRef, useState } from 'react'
+import { MapPin, Crosshair, ZoomIn, ZoomOut } from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import 'leaflet/dist/leaflet.css'
 
-  <!-- Leaflet (no key needed) -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-  />
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
+type LatLng = { lat: number; lng: number }
+type Selected = { lat: number; lng: number; address: string | null }
 
-  <style>
-    :root { color-scheme: light dark; }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; padding: 16px;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      background: var(--tg-theme-bg-color, #fff);
-      color: var(--tg-theme-text-color, #111);
-      min-height: 100dvh; display: grid; place-items: center;
-    }
-    .card {
-      width: 100%; max-width: 520px;
-      padding: 16px; border-radius: 16px;
-      background: var(--tg-theme-secondary-bg-color, #f5f5f5);
-      box-shadow: 0 2px 10px rgba(0,0,0,.06);
-    }
-    h1 { margin: 0 0 12px; font-size: 20px; }
-    .muted { opacity: .8; margin: 0 0 16px; }
-    .field { display: grid; gap: 6px; margin: 12px 0; }
-    .label { font-size: 13px; opacity: .9; }
-    input[type="text"], input[type="datetime-local"], input[type="date"] {
-      width: 100%; padding: 12px 14px; border-radius: 12px;
-      border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
-      background: var(--tg-theme-bg-color, #fff);
-      color: var(--tg-theme-text-color, #111);
-      outline: none;
-    }
-    #map {
-      width: 100%; height: 360px; border-radius: 12px; overflow: hidden;
-      background: #dcdcdc; margin-top: 8px;
-    }
-    .row { display: flex; gap: 8px; margin-top: 12px; }
-    button {
-      flex: 1; padding: 12px 14px; border: 0; border-radius: 12px;
-      font-size: 16px; font-weight: 600;
-      background: var(--tg-theme-button-color, #2ea6ff);
-      color: var(--tg-theme-button-text-color, #fff);
-      cursor: pointer;
-    }
-    button.secondary {
-      background: transparent;
-      color: var(--tg-theme-hint-color, #555);
-      outline: 1px solid color-mix(in srgb, currentColor 25%, transparent);
-    }
-    .info {
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 12px; margin-top: 8px; white-space: nowrap; overflow: auto;
-    }
-    .error { color: #b00020; font-size: 12px; margin-top: 6px; display: none; }
-    .leaflet-control-attribution { font-size: 11px; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h1>Create Event</h1>
-    <p class="muted">Fill the details and pick a location. The form will send a single payload to your bot.</p>
+declare global {
+  interface Window {
+    Telegram?: any
+  }
+}
 
-    <!-- Event name -->
-    <div class="field">
-      <label class="label" for="eventName">Event name</label>
-      <input id="eventName" type="text" placeholder="E.g. Training at La Merced" autocomplete="off" />
-    </div>
+export default function CreateEventView() {
+  // --- form state ---
+  const [eventName, setEventName] = useState('')
+  const [datetimeLocal, setDatetimeLocal] = useState<string>(() => {
+    const now = new Date()
+    now.setSeconds(0, 0)
+    const m = now.getMinutes()
+    now.setMinutes(m + ((15 - (m % 15)) % 15))
+    return toLocalDatetimeValue(now)
+  })
 
-    <!-- Event date/time (uses datetime-local; you can switch to date only if you prefer) -->
-    <div class="field">
-      <label class="label" for="eventDate">Date & time</label>
-      <input id="eventDate" type="datetime-local" />
-      <div id="dateError" class="error">Please choose a date/time.</div>
-    </div>
+  // --- map state ---
+  const mapEl = useRef<HTMLDivElement | null>(null)
+  const mapRef = useRef<any>(null)       // Leaflet.Map
+  const tileRef = useRef<any>(null)      // Leaflet.TileLayer
+  const markerRef = useRef<any>(null)    // Leaflet.Marker
+  const [zoomLevel, setZoomLevel] = useState(15)
+  const [selected, setSelected] = useState<Selected | null>(null)
 
-    <!-- Map -->
-    <div class="field">
-      <label class="label">Location</label>
-      <div id="map" role="application" aria-label="Location map"></div>
-      <div class="info" id="coords">Lat: —, Lng: —</div>
-      <div class="info" id="addr">Address: —</div>
-      <div id="locError" class="error">Please place the pin.</div>
-    </div>
+  // init map
+  useEffect(() => {
+    let destroyed = false
+    ;(async () => {
+      const L = (await import('leaflet')).default
 
-    <div class="row">
-      <button class="secondary" id="locate" type="button">Use my location</button>
-      <button id="send" type="button">Create event</button>
-    </div>
-  </div>
+      if (!mapEl.current || destroyed || mapRef.current) return
 
-  <script>
-    // Telegram bridge
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand?.();
+      // default center (CDMX)
+      const center: LatLng = { lat: 19.4326, lng: -99.1332 }
+      const map = L.map(mapEl.current, { zoomControl: false }).setView(center, zoomLevel)
+      mapRef.current = map
 
-    // MainButton mirrors the in-page button
-    tg.MainButton.setText('Create event');
-    tg.MainButton.hide();
-    tg.MainButton.onClick(sendEvent);
+      // primary tiles (single host)
+      const primary = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors',
+      }).addTo(map)
+      tileRef.current = primary
 
-    // State
-    let map, marker, selected = null, layer, fallbackUsed = false;
-
-    // Prefill event date with "now" rounded to next 15m
-    (function prefillDate() {
-      const input = document.getElementById('eventDate');
-      const now = new Date();
-      now.setSeconds(0,0);
-      const mins = now.getMinutes();
-      now.setMinutes(mins + (15 - (mins % 15)) % 15);
-      input.value = toLocalDatetimeValue(now);
-    })();
-
-    // Validate form: show/hide TG MainButton
-    const nameInput = document.getElementById('eventName');
-    const dateInput = document.getElementById('eventDate');
-    nameInput.addEventListener('input', updateValidity);
-    dateInput.addEventListener('input', updateValidity);
-
-    function updateValidity() {
-      const ok = isValid();
-      document.getElementById('dateError').style.display = dateInput.value ? 'none' : 'block';
-      document.getElementById('locError').style.display = selected ? 'none' : 'block';
-      if (ok) tg.MainButton.show(); else tg.MainButton.hide();
-      document.getElementById('send').disabled = !ok;
-    }
-
-    function isValid() {
-      return nameInput.value.trim().length > 0
-          && dateInput.value
-          && !!selected;
-    }
-
-    // Map init (Leaflet)
-    map = L.map('map', { zoomControl: true, attributionControl: true })
-            .setView([19.4326, -99.1332], 13); // CDMX default
-
-    addTiles('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors'
-    });
-
-    function addTiles(url, opts) {
-      if (layer) map.removeLayer(layer);
-      layer = L.tileLayer(url, opts).addTo(map);
-      layer.once('tileerror', onTileError);
-      setTimeout(() => map.invalidateSize(), 0);
-    }
-
-    function onTileError() {
-      if (fallbackUsed) return;
-      fallbackUsed = true;
-      addTiles('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        subdomains: ['a','b','c','d'],
-        maxZoom: 20,
-        attribution: '&copy; OSM &copy; <a href="https://carto.com/attributions">CARTO</a>'
-      });
-    }
-
-    // Map interactions
-    map.on('click', (e) => setMarker(e.latlng.lat, e.latlng.lng));
-
-    document.getElementById('locate').addEventListener('click', () => {
-      if (!navigator.geolocation) {
-        alert('Geolocation not available. Tap the map to set a pin.');
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = pos.coords.latitude, lng = pos.coords.longitude;
-          map.setView([lat, lng], 16);
-          setMarker(lat, lng);
-        },
-        () => alert('Could not get location. Tap the map to set a pin.'),
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
-    });
-
-    document.getElementById('send').addEventListener('click', sendEvent);
-
-    function setMarker(lat, lng) {
-      if (!marker) {
-        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-        marker.on('dragend', () => {
-          const p = marker.getLatLng();
-          updateSelection(p.lat, p.lng);
-        });
-      } else {
-        marker.setLatLng([lat, lng]);
-      }
-      updateSelection(lat, lng);
-    }
-
-    function updateSelection(lat, lng) {
-      selected = { lat: round6(lat), lng: round6(lng), address: null };
-      document.getElementById('coords').textContent = `Lat: ${selected.lat}, Lng: ${selected.lng}`;
-      document.getElementById('addr').textContent = 'Address: looking up…';
-      reverseGeocode(lat, lng)
-        .then(addr => {
-          selected.address = addr || null;
-          document.getElementById('addr').textContent = 'Address: ' + (addr || 'not available');
-          updateValidity();
+      primary.once('tileerror', () => {
+        // fallback provider
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+          maxZoom: 20,
+          subdomains: ['a', 'b', 'c', 'd'],
+          attribution: '&copy; OSM &copy; <a href="https://carto.com/attributions">CARTO</a>',
         })
-        .catch(() => {
-          selected.address = null;
-          document.getElementById('addr').textContent = 'Address: not available';
-          updateValidity();
-        });
-    }
+          .addTo(map)
+      })
 
-    async function reverseGeocode(lat, lng) {
-      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
-      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data.display_name || null;
-    }
+      // click to place/move marker
+      map.on('click', (e: any) => setMarker(e.latlng.lat, e.latlng.lng))
 
-    // Sender
-    function sendEvent() {
-      // show inline validation
-      updateValidity();
-      if (!isValid()) return;
+      // keep zoomLevel in state
+      map.on('zoomend', () => setZoomLevel(map.getZoom()))
 
-      // build event object
-      const whenLocal = dateInput.value; // "YYYY-MM-DDTHH:MM"
-      const whenISO = toIsoFromLocal(whenLocal); // standardized
-      const payload = {
-        type: 'create_event',
-        data: {
-          name: nameInput.value.trim(),
-          datetime_local: whenLocal,
-          datetime_iso: whenISO,
-          tz_offset_minutes: new Date().getTimezoneOffset() * -1, // positive east
-          location: {
-            lat: selected.lat,
-            lng: selected.lng,
-            address: selected.address ?? null
-          }
-        }
-      };
+      // after Telegram expands
+      setTimeout(() => map.invalidateSize(), 0)
+    })()
 
-      tg.sendData(JSON.stringify(payload));
-      tg.close();
+    return () => {
+      destroyed = true
+      mapRef.current?.remove?.()
+      mapRef.current = null
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-    // helpers
-    function round6(n) { return Math.round(n * 1e6) / 1e6; }
-    function toLocalDatetimeValue(d) {
-      // returns "YYYY-MM-DDTHH:MM" in local time
-      const pad = (n) => String(n).padStart(2,'0');
-      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  // marker helpers
+  function setMarker(lat: number, lng: number) {
+    if (!mapRef.current) return
+    import('leaflet').then(({ default: L }) => {
+      if (!markerRef.current) {
+        markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current)
+        markerRef.current.on('dragend', () => {
+          const p = markerRef.current.getLatLng()
+          updateSelection(p.lat, p.lng)
+        })
+      } else {
+        markerRef.current.setLatLng([lat, lng])
+      }
+      updateSelection(lat, lng)
+    })
+  }
+
+  function updateSelection(lat: number, lng: number) {
+    const round6 = (n: number) => Math.round(n * 1e6) / 1e6
+    const coords = { lat: round6(lat), lng: round6(lng) }
+    reverseGeocode(coords).then((address) => {
+      setSelected({ ...coords, address })
+    })
+  }
+
+  async function reverseGeocode({ lat, lng }: LatLng): Promise<string | null> {
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`
+      const res = await fetch(url, { headers: { Accept: 'application/json' } })
+      if (!res.ok) return null
+      const data = await res.json()
+      return data?.display_name || null
+    } catch {
+      return null
     }
-    function toIsoFromLocal(localStr) {
-      // interpret local "YYYY-MM-DDTHH:MM" as local time and convert to ISO
-      if (!localStr) return null;
-      const [date, time] = localStr.split('T');
-      const [y,m,dd] = date.split('-').map(Number);
-      const [hh,mm] = (time || '00:00').split(':').map(Number);
-      const dt = new Date(y, (m-1), dd, hh, mm, 0);
-      return dt.toISOString();
+  }
+
+  // ui actions
+  const handleZoomIn = () => mapRef.current?.zoomIn()
+  const handleZoomOut = () => mapRef.current?.zoomOut()
+  const handleLocate = () => {
+    if (!navigator.geolocation) return alert('Geolocation not available.')
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude
+        const lng = pos.coords.longitude
+        mapRef.current?.setView([lat, lng], 16)
+        setMarker(lat, lng)
+      },
+      () => alert('Could not get location. Tap the map to set a pin.'),
+      { enableHighAccuracy: true, timeout: 8000 }
+    )
+  }
+
+  // send payload to bot
+  const canSend = eventName.trim().length > 0 && !!datetimeLocal && !!selected
+  useEffect(() => {
+    const tg = window.Telegram?.WebApp
+    if (!tg) return
+    tg.ready?.()
+    tg.expand?.()
+    if (canSend) tg.MainButton?.show?.()
+    else tg.MainButton?.hide?.()
+    tg.MainButton?.setText?.('Create event')
+    tg.MainButton?.onClick?.(() => doSend(tg))
+    return () => tg.MainButton?.offClick?.(doSend as any)
+  }, [canSend])
+
+  function doSend(tg: any) {
+    if (!canSend || !selected) return
+    const iso = toIsoFromLocal(datetimeLocal)
+    const payload = {
+      type: 'create_event',
+      data: {
+        name: eventName.trim(),
+        datetime_local: datetimeLocal,
+        datetime_iso: iso,
+        tz_offset_minutes: new Date().getTimezoneOffset() * -1,
+        location: {
+          lat: selected.lat,
+          lng: selected.lng,
+          address: selected.address ?? null,
+        },
+      },
     }
-  </script>
-</body>
-</html>
+    tg.sendData?.(JSON.stringify(payload))
+    tg.close?.()
+  }
+
+  return (
+    <Card className="overflow-hidden shadow-lg border">
+      {/* header/fields */}
+      <div className="p-4 space-y-3">
+        <h2 className="text-base font-semibold">Create Event</h2>
+        <div className="grid gap-2">
+          <label className="text-sm">Event name</label>
+          <input
+            className="h-10 rounded-md border px-3 text-sm bg-background"
+            value={eventName}
+            onChange={(e) => setEventName(e.target.value)}
+            placeholder="e.g., Training at La Merced"
+          />
+        </div>
+        <div className="grid gap-2">
+          <label className="text-sm">Date &amp; time</label>
+          <input
+            type="datetime-local"
+            className="h-10 rounded-md border px-3 text-sm bg-background"
+            value={datetimeLocal}
+            onChange={(e) => setDatetimeLocal(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* map area */}
+      <div className="relative h-80">
+        <div ref={mapEl} className="absolute inset-0 rounded-md overflow-hidden" />
+
+        {/* controls (top-right) */}
+        <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
+          <Button variant="secondary" size="icon" className="h-9 w-9 border" onClick={handleZoomIn}>
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button variant="secondary" size="icon" className="h-9 w-9 border" onClick={handleZoomOut}>
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <Button variant="secondary" size="icon" className="h-9 w-9 border" onClick={handleLocate}>
+            <Crosshair className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* zoom indicator */}
+        <div className="absolute bottom-3 left-3 text-xs bg-background/80 backdrop-blur rounded-full px-3 py-1 border">
+          Zoom: {zoomLevel}
+        </div>
+      </div>
+
+      {/* footer / info + send */}
+      <div className="p-4 space-y-2">
+        <div className="text-xs font-mono">
+          Lat: {selected?.lat ?? '—'}, Lng: {selected?.lng ?? '—'}
+        </div>
+        <div className="text-xs font-mono truncate">
+          Address: {selected?.address ?? '—'}
+        </div>
+
+        <div className="mt-3 flex gap-2">
+          <Button variant="secondary" className="flex-1 border" onClick={handleLocate}>
+            Use my location
+          </Button>
+          <Button className="flex-1" disabled={!canSend} onClick={() => doSend(window.Telegram?.WebApp)}>
+            Create event
+          </Button>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+/* ---------- helpers ---------- */
+function toLocalDatetimeValue(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function toIsoFromLocal(localStr: string | null) {
+  if (!localStr) return null
+  const [date, time] = localStr.split('T')
+  const [y, m, dd] = date.split('-').map(Number)
+  const [hh, mm] = (time || '00:00').split(':').map(Number)
+  const dt = new Date(y, m - 1, dd, hh, mm, 0)
+  return dt.toISOString()
+}
