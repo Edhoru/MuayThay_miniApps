@@ -4,8 +4,11 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Create Event</title>
+
+<!-- Telegram bridge -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
+<!-- Leaflet (no key) -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
 
@@ -15,108 +18,148 @@
   body {
     margin: 0; padding: 16px;
     font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    background: var(--tg-theme-bg-color, #fff);
-    color: var(--tg-theme-text-color, #111);
-    min-height: 100dvh; display: grid; place-items: center;
+    background: var(--tg-theme-bg-color, #0b0b0b);
+    color: var(--tg-theme-text-color, #eaeaea);
   }
-  /* Card (your layout’s outer container) */
+  .container { max-width: 760px; margin: 0 auto; display: grid; gap: 18px; }
+
+  /* Generic “card” blocks to mirror your layout */
   .card {
-    width: 100%; max-width: 560px;
-    border-radius: 16px;
-    background: var(--tg-theme-secondary-bg-color, #f6f6f6);
-    box-shadow: 0 2px 10px rgba(0,0,0,.06);
-    border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
-    overflow: hidden;
-  }
-  .section { padding: 16px; }
-  h2 { margin: 0 0 10px; font-size: 18px; }
-  .grid { display: grid; gap: 8px; }
-  .label { font-size: 13px; opacity: .9; }
-  input[type="text"], input[type="datetime-local"] {
-    height: 40px; border-radius: 10px; padding: 0 12px;
-    border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
-    background: var(--tg-theme-bg-color, #fff);
-    color: inherit; outline: none;
+    background: var(--tg-theme-secondary-bg-color, #121212);
+    border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.25);
   }
 
-  /* Map area with overlaid controls (your MapView layout) */
-  .map-wrap { position: relative; height: 360px; }
-  #map { position: absolute; inset: 0; border-radius: 12px; overflow: hidden; background: #ddd; }
+  /* Hero */
+  .hero { padding: 22px; display: grid; gap: 6px; }
+  .hero h1 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: .2px; }
+  .hero p  { margin: 0; opacity: .85; }
+
+  /* Section headers inside cards */
+  .section-title {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    font-weight: 600;
+  }
+  .bullet {
+    width: 28px; height: 28px; border-radius: 999px;
+    background: color-mix(in srgb, currentColor 8%, transparent);
+    display: grid; place-items: center; font-size: 14px;
+  }
+
+  /* Fields */
+  .field { display: grid; gap: 8px; margin-top: 12px; }
+  .label { font-size: 13px; opacity: .9; display: flex; align-items: center; gap: 8px; }
+  .label .tick { width: 6px; height: 16px; border-radius: 2px;
+    background: color-mix(in srgb, currentColor 18%, transparent); display: inline-block; }
+  input[type="text"], input[type="datetime-local"], input[type="search"] {
+    height: 44px; border-radius: 12px; padding: 0 14px;
+    background: var(--tg-theme-bg-color, #0b0b0b);
+    color: var(--tg-theme-text-color, #eaeaea);
+    border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+    outline: none;
+  }
+  .search-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .icon-btn {
+    min-width: 44px; height: 44px; border-radius: 12px; border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+    background: var(--tg-theme-bg-color, #0b0b0b); color: inherit; cursor: pointer;
+  }
+
+  /* Map section (tactical map) */
+  .map-wrap { position: relative; height: 360px; margin-top: 8px; }
+  #map { position: absolute; inset: 0; border-radius: 16px; overflow: hidden; background: #1b1b1b; }
   .controls {
     position: absolute; top: 10px; right: 10px; z-index: 10;
     display: flex; flex-direction: column; gap: 8px;
   }
-  .control-btn {
-    width: 38px; height: 38px; border-radius: 10px;
-    background: var(--tg-theme-bg-color, #fff); color: inherit;
-    border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
-    display: grid; place-items: center; cursor: pointer;
+  .control-btn { width: 40px; height: 40px; border-radius: 12px; cursor: pointer;
+    background: var(--tg-theme-bg-color, #0b0b0b);
+    color: var(--tg-theme-text-color, #eaeaea);
+    border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+    display: grid; place-items: center;
   }
   .badge {
     position: absolute; left: 10px; bottom: 10px; z-index: 10;
-    font-size: 12px; background: color-mix(in srgb, var(--tg-theme-bg-color, #fff) 85%, transparent);
-    padding: 4px 10px; border-radius: 999px;
-    border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+    font-size: 12px; border-radius: 999px; padding: 5px 10px;
+    background: color-mix(in srgb, var(--tg-theme-bg-color, #0b0b0b) 85%, transparent);
+    border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
     backdrop-filter: blur(6px);
   }
 
-  /* Footer: coords, address and actions */
-  .footer { padding: 12px 16px 16px; display: grid; gap: 8px; }
-  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; white-space: nowrap; overflow: auto; }
-  .row { display: flex; gap: 8px; }
+  /* Info + actions */
+  .meta { display: grid; gap: 6px; margin-top: 10px; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; opacity: .9; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .btn {
-    flex: 1; height: 44px; border-radius: 12px; font-weight: 600; cursor: pointer;
-    border: 0; background: var(--tg-theme-button-color, #2ea6ff);
-    color: var(--tg-theme-button-text-color, #fff);
+    height: 46px; border-radius: 12px; font-weight: 600; cursor: pointer; border: 0;
+    background: var(--tg-theme-button-color, #2ea6ff); color: var(--tg-theme-button-text-color, #fff);
   }
   .btn.secondary {
-    background: transparent; color: var(--tg-theme-hint-color, #555);
-    border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+    background: transparent; color: var(--tg-theme-text-color, #eaeaea);
+    border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
   }
-  .error { color: #b00020; font-size: 12px; display: none; }
+  .error { color: #ff5a5a; font-size: 12px; display: none; }
   .leaflet-control-attribution { font-size: 11px; }
-  /* minimal icons (no color libs) */
   .ico { font: 16px/1 system-ui, sans-serif; }
 </style>
 </head>
 <body>
-  <div class="card">
-    <!-- Fields (keeps your layout idea) -->
-    <div class="section grid">
-      <h2>Create Event</h2>
-      <div class="grid">
-        <label class="label" for="eventName">Event name</label>
-        <input id="eventName" type="text" placeholder="e.g., Training at La Merced" autocomplete="off" />
+  <div class="container">
+    <!-- HERO -->
+    <div class="card hero">
+      <h1>Create Event</h1>
+      <p>Elite combat sport event setup</p>
+    </div>
+
+    <!-- EVENT DETAILS -->
+    <div class="card">
+      <div class="section-title"><div class="bullet">⚡</div><div>Event Details</div></div>
+
+      <div class="field">
+        <div class="label"><span class="tick"></span>Event Name</div>
+        <input id="eventName" type="text" placeholder="e.g., Championship Arena" autocomplete="off" />
       </div>
-      <div class="grid">
-        <label class="label" for="eventDate">Date &amp; time</label>
+
+      <div class="field">
+        <div class="label"><span class="tick"></span>Event Date</div>
         <input id="eventDate" type="datetime-local" />
         <div id="dateError" class="error">Please choose a date &amp; time.</div>
       </div>
     </div>
 
-    <!-- Map with overlay controls (zoom/locate) -->
-    <div class="section">
-      <div class="label" style="margin-bottom:6px">Location</div>
-      <div class="map-wrap">
-        <div id="map" role="application" aria-label="Location map"></div>
+    <!-- EVENT LOCATION -->
+    <div class="card">
+      <div class="section-title"><div class="bullet">📍</div><div>Event Location</div></div>
 
-        <div class="controls">
-          <button class="control-btn" id="zoomIn"  title="Zoom in"><span class="ico">＋</span></button>
-          <button class="control-btn" id="zoomOut" title="Zoom out"><span class="ico">－</span></button>
-          <button class="control-btn" id="locate"  title="Use my location"><span class="ico">◎</span></button>
+      <div class="field">
+        <div class="label"><span class="tick"></span>Search Arena</div>
+        <div class="search-row">
+          <input id="searchInput" type="search" placeholder="Find elite venues..." />
+          <button id="searchBtn" class="icon-btn" title="Search"><span class="ico">🔍</span></button>
         </div>
-
-        <div class="badge" id="zoomBadge">Zoom: —</div>
       </div>
-      <div id="locError" class="error" style="margin-top:6px">Please place the pin.</div>
-    </div>
 
-    <!-- Footer -->
-    <div class="footer">
-      <div class="mono" id="coords">Lat: —, Lng: —</div>
-      <div class="mono" id="addr">Address: —</div>
-      <div class="row">
+      <div class="field">
+        <div class="label"><span class="tick"></span>Tactical Map</div>
+        <div class="map-wrap">
+          <div id="map" role="application" aria-label="Location map"></div>
+          <div class="controls">
+            <button class="control-btn" id="zoomIn" title="Zoom in"><span class="ico">＋</span></button>
+            <button class="control-btn" id="zoomOut" title="Zoom out"><span class="ico">－</span></button>
+            <button class="control-btn" id="locate" title="Use my location"><span class="ico">◎</span></button>
+          </div>
+          <div class="badge" id="zoomBadge">Zoom: —</div>
+        </div>
+        <div id="locError" class="error">Please place the pin.</div>
+
+        <div class="meta">
+          <div class="mono" id="coords">Lat: —, Lng: —</div>
+          <div class="mono" id="addr">Address: —</div>
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:12px">
         <button class="btn secondary" id="useMyLocation" type="button">Use my location</button>
         <button class="btn" id="createBtn" type="button">Create event</button>
       </div>
@@ -124,34 +167,35 @@
   </div>
 
 <script>
-  // Telegram
+  // Telegram bridge
   const tg = window.Telegram.WebApp; tg.ready(); tg.expand?.();
 
-  // Form refs
+  // Elements
   const nameInput = document.getElementById('eventName');
   const dateInput = document.getElementById('eventDate');
-  const createBtn = document.getElementById('createBtn');
-  const dateError = document.getElementById('dateError');
-  const locError  = document.getElementById('locError');
+  const searchInput = document.getElementById('searchInput');
+  const searchBtn   = document.getElementById('searchBtn');
+  const createBtn   = document.getElementById('createBtn');
+  const dateError   = document.getElementById('dateError');
+  const locError    = document.getElementById('locError');
 
-  // Prefill date to next 15 min
+  // Prefill date (next 15m)
   (function prefill() {
     const now = new Date(); now.setSeconds(0,0);
     const m = now.getMinutes(); now.setMinutes(m + (15 - (m % 15)) % 15);
     dateInput.value = toLocalDatetimeValue(now);
   })();
 
-  // Leaflet map (matches your overlay-controls layout)
+  // Map setup
   let map, marker, selected = null;
   map = L.map('map', { zoomControl: false, attributionControl: true })
-          .setView([19.4326, -99.1332], 13); // CDMX default
-  updateZoomBadge();
+          .setView([19.4326, -99.1332], 13);
+  setTimeout(() => map.invalidateSize(), 0);
 
   const base = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors'
   }).addTo(map);
-
   base.once('tileerror', () => {
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       subdomains: ['a','b','c','d'], maxZoom: 20,
@@ -159,18 +203,32 @@
     }).addTo(map);
   });
 
-  setTimeout(() => map.invalidateSize(), 0);
   map.on('click', (e) => setMarker(e.latlng.lat, e.latlng.lng));
-  map.on('zoomend', updateZoomBadge);
+  map.on('zoomend', () => document.getElementById('zoomBadge').textContent = `Zoom: ${map.getZoom()}`);
 
-  // overlay controls
-  document.getElementById('zoomIn').onclick = () => map.zoomIn();
+  // Overlay controls
+  document.getElementById('zoomIn').onclick  = () => map.zoomIn();
   document.getElementById('zoomOut').onclick = () => map.zoomOut();
-  document.getElementById('locate').onclick = useMyLocation;
+  document.getElementById('locate').onclick  = useMyLocation;
   document.getElementById('useMyLocation').onclick = useMyLocation;
 
-  function updateZoomBadge() {
-    document.getElementById('zoomBadge').textContent = `Zoom: ${map.getZoom()}`;
+  // Search
+  searchBtn.onclick = searchVenue;
+  searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') searchVenue(); });
+
+  async function searchVenue() {
+    const q = searchInput.value.trim();
+    if (!q) return;
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&limit=1`;
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const data = await res.json();
+      if (Array.isArray(data) && data.length) {
+        const lat = parseFloat(data[0].lat), lng = parseFloat(data[0].lon);
+        map.setView([lat, lng], 16);
+        setMarker(lat, lng, data[0].display_name);
+      }
+    } catch {}
   }
 
   function useMyLocation() {
@@ -186,7 +244,7 @@
     );
   }
 
-  function setMarker(lat, lng) {
+  function setMarker(lat, lng, presetAddress) {
     if (!marker) {
       marker = L.marker([lat, lng], { draggable: true }).addTo(map);
       marker.on('dragend', () => {
@@ -196,13 +254,21 @@
     } else {
       marker.setLatLng([lat, lng]);
     }
-    updateSelection(lat, lng);
+    updateSelection(lat, lng, presetAddress);
   }
 
-  function updateSelection(lat, lng) {
+  function updateSelection(lat, lng, presetAddress) {
     selected = { lat: round6(lat), lng: round6(lng), address: null };
     document.getElementById('coords').textContent = `Lat: ${selected.lat}, Lng: ${selected.lng}`;
     document.getElementById('addr').textContent = 'Address: looking up…';
+
+    if (presetAddress) {
+      selected.address = presetAddress;
+      document.getElementById('addr').textContent = 'Address: ' + presetAddress;
+      updateValidity();
+      return;
+    }
+
     reverseGeocode(lat, lng).then(addr => {
       selected.address = addr || null;
       document.getElementById('addr').textContent = 'Address: ' + (addr || 'not available');
@@ -222,10 +288,14 @@
     return data.display_name || null;
   }
 
-  // validation + MainButton like your flow
+  // Validation + MainButton
   nameInput.addEventListener('input', updateValidity);
   dateInput.addEventListener('input', updateValidity);
   createBtn.addEventListener('click', send);
+
+  tg.MainButton.setText('Create event');
+  tg.MainButton.onClick(send);
+  updateValidity();
 
   function updateValidity() {
     const ok = isValid();
@@ -233,8 +303,6 @@
     locError.style.display  = selected ? 'none' : 'block';
     createBtn.disabled = !ok;
     if (ok) tg.MainButton.show(); else tg.MainButton.hide();
-    tg.MainButton.setText('Create event');
-    tg.MainButton.onClick(send);
   }
 
   function isValid() {
@@ -259,7 +327,7 @@
     tg.close();
   }
 
-  // helpers
+  // Helpers
   function round6(n){ return Math.round(n*1e6)/1e6; }
   function toLocalDatetimeValue(d){
     const p = n => String(n).padStart(2,'0');
