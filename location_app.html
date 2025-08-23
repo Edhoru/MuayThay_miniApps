@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Daoko – Where</title>
+  <title>Create Event</title>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
@@ -31,14 +31,26 @@
       min-height: 100dvh; display: grid; place-items: center;
     }
     .card {
-      width: 100%; max-width: 480px;
+      width: 100%; max-width: 520px;
       padding: 16px; border-radius: 16px;
       background: var(--tg-theme-secondary-bg-color, #f5f5f5);
       box-shadow: 0 2px 10px rgba(0,0,0,.06);
     }
-    h1 { margin: 0 0 8px; font-size: 20px; }
-    .muted { opacity: .75; margin: 0 0 12px; }
-    #map { width: 100%; height: 360px; border-radius: 12px; overflow: hidden; background: #dcdcdc; }
+    h1 { margin: 0 0 12px; font-size: 20px; }
+    .muted { opacity: .8; margin: 0 0 16px; }
+    .field { display: grid; gap: 6px; margin: 12px 0; }
+    .label { font-size: 13px; opacity: .9; }
+    input[type="text"], input[type="datetime-local"], input[type="date"] {
+      width: 100%; padding: 12px 14px; border-radius: 12px;
+      border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+      background: var(--tg-theme-bg-color, #fff);
+      color: var(--tg-theme-text-color, #111);
+      outline: none;
+    }
+    #map {
+      width: 100%; height: 360px; border-radius: 12px; overflow: hidden;
+      background: #dcdcdc; margin-top: 8px;
+    }
     .row { display: flex; gap: 8px; margin-top: 12px; }
     button {
       flex: 1; padding: 12px 14px; border: 0; border-radius: 12px;
@@ -54,54 +66,102 @@
     }
     .info {
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 13px; margin-top: 10px; white-space: nowrap; overflow: auto;
+      font-size: 12px; margin-top: 8px; white-space: nowrap; overflow: auto;
     }
+    .error { color: #b00020; font-size: 12px; margin-top: 6px; display: none; }
     .leaflet-control-attribution { font-size: 11px; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Set Where V3</h1>
-    <p class="muted">Tap on the map (or drag the pin). Use “Send location” when ready.</p>
+    <h1>Create Event</h1>
+    <p class="muted">Fill the details and pick a location. The form will send a single payload to your bot.</p>
 
-    <div id="map" role="application" aria-label="Location map"></div>
+    <!-- Event name -->
+    <div class="field">
+      <label class="label" for="eventName">Event name</label>
+      <input id="eventName" type="text" placeholder="E.g. Training at La Merced" autocomplete="off" />
+    </div>
 
-    <div class="info" id="coords">Lat: —, Lng: —</div>
-    <div class="info" id="addr">Address: —</div>
+    <!-- Event date/time (uses datetime-local; you can switch to date only if you prefer) -->
+    <div class="field">
+      <label class="label" for="eventDate">Date & time</label>
+      <input id="eventDate" type="datetime-local" />
+      <div id="dateError" class="error">Please choose a date/time.</div>
+    </div>
+
+    <!-- Map -->
+    <div class="field">
+      <label class="label">Location</label>
+      <div id="map" role="application" aria-label="Location map"></div>
+      <div class="info" id="coords">Lat: —, Lng: —</div>
+      <div class="info" id="addr">Address: —</div>
+      <div id="locError" class="error">Please place the pin.</div>
+    </div>
 
     <div class="row">
-      <button class="secondary" id="locate">Use my location</button>
-      <button id="send">Send location</button>
+      <button class="secondary" id="locate" type="button">Use my location</button>
+      <button id="send" type="button">Create event</button>
     </div>
   </div>
 
   <script>
+    // Telegram bridge
     const tg = window.Telegram.WebApp;
     tg.ready();
     tg.expand?.();
 
-    tg.MainButton.setText('Send location');
+    // MainButton mirrors the in-page button
+    tg.MainButton.setText('Create event');
     tg.MainButton.hide();
-    tg.MainButton.onClick(sendLocation);
+    tg.MainButton.onClick(sendEvent);
 
+    // State
     let map, marker, selected = null, layer, fallbackUsed = false;
 
-    // 1) Init map
+    // Prefill event date with "now" rounded to next 15m
+    (function prefillDate() {
+      const input = document.getElementById('eventDate');
+      const now = new Date();
+      now.setSeconds(0,0);
+      const mins = now.getMinutes();
+      now.setMinutes(mins + (15 - (mins % 15)) % 15);
+      input.value = toLocalDatetimeValue(now);
+    })();
+
+    // Validate form: show/hide TG MainButton
+    const nameInput = document.getElementById('eventName');
+    const dateInput = document.getElementById('eventDate');
+    nameInput.addEventListener('input', updateValidity);
+    dateInput.addEventListener('input', updateValidity);
+
+    function updateValidity() {
+      const ok = isValid();
+      document.getElementById('dateError').style.display = dateInput.value ? 'none' : 'block';
+      document.getElementById('locError').style.display = selected ? 'none' : 'block';
+      if (ok) tg.MainButton.show(); else tg.MainButton.hide();
+      document.getElementById('send').disabled = !ok;
+    }
+
+    function isValid() {
+      return nameInput.value.trim().length > 0
+          && dateInput.value
+          && !!selected;
+    }
+
+    // Map init (Leaflet)
     map = L.map('map', { zoomControl: true, attributionControl: true })
             .setView([19.4326, -99.1332], 13); // CDMX default
 
-    // 2) Add primary tiles (single host; fewer chances of being blocked)
     addTiles('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors'
     });
 
-    // 3) If the first tile fails, swap to a fallback provider automatically
     function addTiles(url, opts) {
       if (layer) map.removeLayer(layer);
       layer = L.tileLayer(url, opts).addTo(map);
       layer.once('tileerror', onTileError);
-      // Helps after Telegram resizes/expands:
       setTimeout(() => map.invalidateSize(), 0);
     }
 
@@ -115,7 +175,7 @@
       });
     }
 
-    // Click to place/move marker
+    // Map interactions
     map.on('click', (e) => setMarker(e.latlng.lat, e.latlng.lng));
 
     document.getElementById('locate').addEventListener('click', () => {
@@ -134,7 +194,7 @@
       );
     });
 
-    document.getElementById('send').addEventListener('click', sendLocation);
+    document.getElementById('send').addEventListener('click', sendEvent);
 
     function setMarker(lat, lng) {
       if (!marker) {
@@ -147,7 +207,6 @@
         marker.setLatLng([lat, lng]);
       }
       updateSelection(lat, lng);
-      tg.MainButton.show();
     }
 
     function updateSelection(lat, lng) {
@@ -158,10 +217,12 @@
         .then(addr => {
           selected.address = addr || null;
           document.getElementById('addr').textContent = 'Address: ' + (addr || 'not available');
+          updateValidity();
         })
         .catch(() => {
           selected.address = null;
           document.getElementById('addr').textContent = 'Address: not available';
+          updateValidity();
         });
     }
 
@@ -173,19 +234,50 @@
       return data.display_name || null;
     }
 
-    function sendLocation() {
-      if (!selected) { alert('Please place the pin first.'); return; }
-      tg.sendData(JSON.stringify({
-        type: 'event_location',
+    // Sender
+    function sendEvent() {
+      // show inline validation
+      updateValidity();
+      if (!isValid()) return;
+
+      // build event object
+      const whenLocal = dateInput.value; // "YYYY-MM-DDTHH:MM"
+      const whenISO = toIsoFromLocal(whenLocal); // standardized
+      const payload = {
+        type: 'create_event',
         data: {
-          lat: selected.lat,
-          lng: selected.lng,
-          address: selected.address ?? null
+          name: nameInput.value.trim(),
+          datetime_local: whenLocal,
+          datetime_iso: whenISO,
+          tz_offset_minutes: new Date().getTimezoneOffset() * -1, // positive east
+          location: {
+            lat: selected.lat,
+            lng: selected.lng,
+            address: selected.address ?? null
+          }
         }
-      }));
+      };
+
+      tg.sendData(JSON.stringify(payload));
       tg.close();
     }
+
+    // helpers
     function round6(n) { return Math.round(n * 1e6) / 1e6; }
+    function toLocalDatetimeValue(d) {
+      // returns "YYYY-MM-DDTHH:MM" in local time
+      const pad = (n) => String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    function toIsoFromLocal(localStr) {
+      // interpret local "YYYY-MM-DDTHH:MM" as local time and convert to ISO
+      if (!localStr) return null;
+      const [date, time] = localStr.split('T');
+      const [y,m,dd] = date.split('-').map(Number);
+      const [hh,mm] = (time || '00:00').split(':').map(Number);
+      const dt = new Date(y, (m-1), dd, hh, mm, 0);
+      return dt.toISOString();
+    }
   </script>
 </body>
 </html>
