@@ -173,12 +173,24 @@
       return data.display_name || null;
     }
 
-    function sendLocation() {
-      if (!selected) { alert('Please place the pin first.'); return; }
-      const payload = { type: 'where', lat: selected.lat, lng: selected.lng, address: selected.address };
-      tg.sendData(JSON.stringify(payload));
-      tg.close();
+function sendLocation() {
+  if (!selected) { alert('Please place the pin first.'); return; }
+  const payload = {
+    type: 'event_location',
+    // keep existing top-level fields (backward compatible)
+    lat: selected.lat,
+    lng: selected.lng,
+    address: selected.address ?? null,
+    // new normalized envelope for future consumers
+    data: {
+      lat: selected.lat,
+      lng: selected.lng,
+      address: selected.address ?? null
     }
+  };
+  tg.sendData(JSON.stringify(payload));
+  tg.close();
+}
 
     function round6(n) { return Math.round(n * 1e6) / 1e6; }
   </script>
