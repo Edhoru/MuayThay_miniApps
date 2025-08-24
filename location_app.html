@@ -14,30 +14,28 @@
 
 <style>
   :root{
-    /* ==== SwiftUI Palette → CSS tokens (sRGB) ==== */
-    /* Background (VelvetBackground, NO overlay) */
-    --bg-0: rgb(22,23,29);   /* 0.085,0.089,0.112 */
-    --bg-1: rgb(42,43,54);   /* 0.165,0.169,0.212 */
-    --bg-2: rgb(29,30,38);   /* 0.114,0.118,0.149 */
-    --bg-3: rgb(20,21,27);   /* 0.078,0.082,0.106 */
+    /* ===== Blue dashboard palette (from SwiftUI) ===== */
+    /* Background gradient stops */
+    --bg-center: rgb(45,50,84);   /* elevated navy (file 234) */
+    --bg-mid:    rgb(40,44,72);   /* slight mix for softness */
+    --bg-edge:   rgb(33,36,65);   /* deep navy (file 233) */
 
     /* Text */
-    --text: rgb(241,238,246);               /* #F1EEF6 */
-    --muted: rgba(199,194,211,0.75);        /* #C7C2D3 @ 75% */
+    --text: rgb(240,242,248);                 /* near-white for readability */
+    --text-secondary: rgb(123,126,166);       /* asset textSecondary (file 235) */
 
     /* Surfaces */
-    --surface: rgba(0,0,0,0.82);            /* .surface */
-    --surface-border: rgba(255,255,255,0.06);
+    --surface: rgba(33,36,65,0.92);           /* backgroundElevated (file 233) */
+    --surface-border: rgba(255,255,255,0.05); /* hairline */
 
-    /* Accents / rims */
-    --accent-purple: rgb(152,89,161);       /* 0.596,0.349,0.631 */
-    --rim-purple: rgb(107,90,174);          /* 0.420,0.353,0.682 */
-    --rim-blue:   rgb(102,117,200);         /* 0.400,0.459,0.784 */
+    /* Accents */
+    --accent-cyan:   rgb(89,123,246);   /* file 229 */
+    --accent-green:  rgb(114,194,148);  /* file 230 */
+    --accent-purple: rgb(78,53,190);    /* file 232 */
 
-    /* Golds for “bronze” badge */
-    --gold-dark:  rgb(142,106,44);
-    --gold-base:  rgb(210,178,108);
-    --gold-light: rgb(255,227,161);
+    /* Control/field fills */
+    --field-bg: rgba(255,255,255,0.055);
+    --field-stroke: rgba(255,255,255,0.12);
   }
 
   *{box-sizing:border-box}
@@ -46,116 +44,117 @@
     font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
     color:var(--text);
 
-    /* SwiftUI: center .topTrailing → “at 85% 15%” works well */
+    /* Blue radial base (no black overlay) */
     background-image:
-      radial-gradient(circle at 85% 15%,
-        var(--bg-0) 0%,
-        var(--bg-1) 30%,
-        var(--bg-2) 55%,
-        var(--bg-3) 100%);
+      radial-gradient(circle at 80% 10%,
+        var(--bg-center) 0%,
+        var(--bg-mid) 45%,
+        var(--bg-edge) 100%);
     background-attachment: fixed;
     background-size: cover;
   }
 
   .container{max-width:760px; margin:0 auto; display:grid; gap:18px; position:relative}
 
-  /* Optional soft glows (like your rimBlue / rimPurple circles) */
-  .glow{position:fixed; pointer-events:none; filter:blur(80px); opacity:.35; z-index:0}
-  .glow.blue{background:var(--rim-blue); width:80px; height:100px; top:8vh; right:6vw; filter:blur(50px)}
-  .glow.purple{background:var(--rim-purple); width:120px; height:120px; bottom:12vh; left:8vw}
+  /* Soft ambient glows (blue/purple) */
+  .glow{position:fixed; pointer-events:none; z-index:0; filter:blur(70px); opacity:.32}
+  .glow.blue{background:var(--accent-cyan); width:120px; height:120px; top:8vh; right:6vw}
+  .glow.purple{background:var(--accent-purple); width:160px; height:160px; bottom:12vh; left:8vw}
 
-  /* Cards: shadow-as-border */
+  /* Cards: rounded, subtle border + deep shadow */
   .card{
     position:relative; z-index:1;
     background:var(--surface);
-    border-radius:24px;
+    border-radius:20px;
     padding:18px;
     border:1px solid var(--surface-border);
     box-shadow:
-      0 0 0 1px rgba(107,90,174,0.22),   /* faint purple rim */
-      0 18px 48px rgba(0,0,0,0.55),      /* depth */
-      inset 0 0 0 1px rgba(255,255,255,0.03);
+      0 8px 28px rgba(12,14,24,0.55),
+      0 0 0 1px rgba(89,123,246,0.10); /* faint cyan rim */
   }
 
   /* Hero */
   .hero{padding:22px; display:grid; gap:6px}
   .hero h1{margin:0; font-size:18px; font-weight:700; letter-spacing:.2px}
-  .hero p{margin:0; color:var(--muted)}
+  .hero p{margin:0; color:var(--text-secondary)}
 
   /* Section headers */
-  .section-title{display:flex; align-items:center; gap:10px; margin-bottom:16px; font-weight:600}
+  .section-title{display:flex; align-items:center; gap:12px; margin-bottom:16px; font-weight:600}
   .bullet{
-    width:36px; height:36px; border-radius:999px; color:#fff; display:grid; place-items:center; font-size:16px;
+    width:36px; height:36px; border-radius:12px; color:#fff; display:grid; place-items:center; font-size:16px;
     background:
-      radial-gradient(100% 100% at 20% 20%, var(--gold-light) 0%, var(--gold-base) 55%, var(--gold-dark) 100%);
-    box-shadow:0 0 0 1px rgba(255,255,255,.08) inset, 0 8px 24px rgba(0,0,0,.35);
+      radial-gradient(120% 120% at 25% 20%, rgba(114,194,148,1) 0%, rgba(89,123,246,1) 70%, rgba(78,53,190,1) 100%);
+    box-shadow:
+      0 2px 10px rgba(0,0,0,.35),
+      0 0 0 1px rgba(255,255,255,.07) inset;
   }
 
   /* Fields */
   .field{display:grid; gap:8px; margin-top:12px}
   .label{font-size:13px; color:var(--text); opacity:.95; display:flex; align-items:center; gap:8px}
-  .label .tick{width:6px; height:16px; border-radius:2px; background:rgba(255,255,255,.12); display:inline-block}
+  .label .tick{width:6px; height:16px; border-radius:2px; background:rgba(255,255,255,.10); display:inline-block}
   input[type="text"], input[type="datetime-local"], input[type="search"]{
     height:44px; border-radius:12px; padding:0 14px;
-    background:rgba(255,255,255,.06);
+    background:var(--field-bg);
     color:var(--text);
-    border:1px solid rgba(255,255,255,.14);
-    outline:none; caret-color:var(--accent-purple); accent-color:var(--accent-purple);
-    box-shadow:inset 0 -1px 0 rgba(255,255,255,.05);
+    border:1px solid var(--field-stroke);
+    outline:none; caret-color:var(--accent-cyan); accent-color:var(--accent-cyan);
+    box-shadow:inset 0 -1px 0 rgba(255,255,255,.04);
   }
-  input::placeholder{color:rgba(239,234,246,.55)}
+  input::placeholder{color:color-mix(in srgb, var(--text-secondary) 75%, transparent)}
   .search-row{display:grid; grid-template-columns:1fr auto; gap:8px}
   .icon-btn{
     min-width:44px; height:44px; border-radius:12px; cursor:pointer;
-    background:rgba(255,255,255,.06); color:var(--text);
-    border:1px solid rgba(255,255,255,.14);
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,.03);
+    background:var(--field-bg); color:var(--text);
+    border:1px solid var(--field-stroke);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.02);
   }
 
   /* Map section */
   .map-wrap{position:relative; height:360px; margin-top:8px}
-  #map{position:absolute; inset:0; border-radius:16px; overflow:hidden; background:#0d0b10}
+  #map{position:absolute; inset:0; border-radius:16px; overflow:hidden; background:rgb(23,26,42)}
   .controls{
     position:absolute; top:10px; right:10px; z-index:10;
     display:flex; flex-direction:column; gap:8px
   }
   .control-btn{
     width:40px; height:40px; border-radius:12px; cursor:pointer;
-    background:rgba(255,255,255,.06); color:var(--text);
-    border:1px solid rgba(255,255,255,.14);
+    background:var(--field-bg); color:var(--text);
+    border:1px solid var(--field-stroke);
     display:grid; place-items:center;
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,.03);
   }
   .badge{
     position:absolute; left:10px; bottom:10px; z-index:10;
     font-size:12px; border-radius:999px; padding:5px 10px;
-    background:rgba(20,20,24,.65);
-    border:1px solid rgba(255,255,255,.12);
+    background:rgba(27,30,50,.75);
+    border:1px solid rgba(255,255,255,.10);
     color:var(--text);
     backdrop-filter:blur(6px)
   }
 
   /* Info + actions */
   .meta{display:grid; gap:6px; margin-top:10px}
-  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; color:var(--muted)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; color:var(--text-secondary)}
   .actions{display:grid; grid-template-columns:1fr 1fr; gap:10px}
   .btn{
     height:46px; border-radius:12px; font-weight:600; cursor:pointer; border:0;
-    background:var(--accent-purple); color:#fff;
-    box-shadow:0 0 0 1px rgba(255,255,255,.08) inset, 0 12px 28px rgba(0,0,0,.45);
+    background:var(--accent-cyan); color:#fff;
+    box-shadow:
+      0 12px 28px rgba(10,14,30,0.45),
+      0 0 0 1px rgba(255,255,255,.06) inset;
   }
   .btn.secondary{
     background:transparent; color:var(--text);
-    border:1px solid rgba(255,255,255,.16)
+    border:1px solid color-mix(in srgb, var(--accent-cyan) 55%, transparent);
   }
   .btn:disabled{opacity:.6; cursor:not-allowed}
-  .error{color:#ff8a8a; font-size:12px; display:none}
+  .error{color:rgb(227,93,104); font-size:12px; display:none} /* file 231 */
   .leaflet-control-attribution{font-size:11px}
   .ico{font:16px/1 system-ui,sans-serif}
 </style>
 </head>
 <body>
-  <!-- soft glows like SwiftUI rimBlue/purple -->
+  <!-- ambient glows -->
   <div class="glow blue"></div>
   <div class="glow purple"></div>
 
