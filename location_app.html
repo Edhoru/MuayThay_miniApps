@@ -227,6 +227,7 @@
   const startParam =
     (tg.initDataUnsafe && tg.initDataUnsafe.start_param) ||
     new URLSearchParams(location.search).get('tgWebAppStartParam') ||
+    new URLSearchParams(location.search).get('ctx') ||
     '';
 
   // Elements
